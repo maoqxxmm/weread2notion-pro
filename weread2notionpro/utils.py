@@ -6,7 +6,7 @@ import os
 import re
 import requests
 import base64
-from weread2notionpro.config  import (
+from weread2notionpro.config import (
     RICH_TEXT,
     URL,
     RELATION,
@@ -18,6 +18,7 @@ from weread2notionpro.config  import (
     SELECT,
 )
 import pendulum
+import math
 
 MAX_LENGTH = (
     1024  # NOTION 2000个字符限制https://developers.notion.com/reference/request-limits
@@ -114,7 +115,7 @@ def get_quote(content):
     }
 
 
-def get_block(content,type,show_color, style, colorStyle, reviewId):
+def get_block(content, type, show_color, style, colorStyle, reviewId):
     color = "default"
     if show_color:
         # 根据划线颜色设置文字的颜色
@@ -142,7 +143,7 @@ def get_block(content,type,show_color, style, colorStyle, reviewId):
             "color": color,
         },
     }
-    if(type=="callout"):
+    if (type == "callout"):
         # 根据不同的划线样式设置不同的emoji 直线type=0 背景颜色是1 波浪线是2
         emoji = "〰️"
         if style == 0:
@@ -200,10 +201,12 @@ def get_first_and_last_day_of_month(date):
 
 def get_first_and_last_day_of_year(date):
     # 获取给定日期所在年的第一天
-    first_day = date.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    first_day = date.replace(month=1, day=1, hour=0,
+                             minute=0, second=0, microsecond=0)
 
     # 获取给定日期所在年的最后一天
-    last_day = date.replace(month=12, day=31, hour=0, minute=0, second=0, microsecond=0)
+    last_day = date.replace(month=12, day=31, hour=0,
+                            minute=0, second=0, microsecond=0)
 
     return first_day, last_day
 
@@ -218,6 +221,7 @@ def get_first_and_last_day_of_week(date):
     last_day_of_week = first_day_of_week + timedelta(days=6)
 
     return first_day_of_week, last_day_of_week
+
 
 def get_properties(dict1, dict2):
     properties = {}
@@ -241,7 +245,8 @@ def get_properties(dict1, dict2):
         elif type == FILES:
             property = {
                 "files": [
-                    {"type": "external", "name": "Cover", "external": {"url": value}}
+                    {"type": "external", "name": "Cover",
+                        "external": {"url": value}}
                 ]
             }
         elif type == DATE:
@@ -287,8 +292,6 @@ def get_property_value(property):
         return str_to_timestamp(content.get("start"))
     else:
         return content
-
-
 
 
 def str_to_timestamp(date):
@@ -360,6 +363,19 @@ def download_image(url, save_dir="cover"):
     return save_path
 
 
-
 def get_embed(url):
     return {"type": "embed", "embed": {"url": url}}
+
+
+def days_between_timestamps(t1, t2):
+    # 判断时间戳是否为毫秒级（长度超过10位一般为毫秒）
+    if t1 > 1e10:  # 例如 1696848000000 是毫秒级
+        t1 /= 1000
+        t2 /= 1000
+
+    # 计算差值（秒），取绝对值避免顺序影响
+    delta_seconds = abs(t2 - t1)
+
+    # 转换为天数（取整或四舍五入）
+    days = delta_seconds / 86400  # 86400 = 24*60*60
+    return math.ceil(days)  # 进1
