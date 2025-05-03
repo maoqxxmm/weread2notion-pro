@@ -4,4 +4,4 @@ github-heatmap
 retrying
 pendulum
 python-dotenv
-weread2notionpro
+weread2notionpro==0.2.5
