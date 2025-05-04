@@ -118,10 +118,10 @@ class WeReadApi:
             self.handle_errcode(errcode)
             print(f"Could not get book info {r.text}")
 
-    @retry(stop_max_attempt_number=3, wait_fixed=5000)
     def get_book_detail(self, bookId):
         """获取当前用户书架上书的详情"""
         url = self.get_url(bookId)
+        print(f"开始获取《{bookId}》详情, url: {url}")
         data = get_book_detail(url)
         return data
 

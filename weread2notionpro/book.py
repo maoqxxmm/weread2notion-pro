@@ -22,16 +22,17 @@ def insert_book_to_notion(books, index, bookId):
     if bookId in notion_books:
         book.update(notion_books.get(bookId))
     bookInfo = weread_api.get_book_detail(bookId)
+    print(f"查询完成，开始解析...")
 
     """需要注入的属性"""
     reader = bookInfo.reader
-    reading_stat = reader.get("readingStat", {})
     book_info = reader.get("bookInfo", {})
     progress = reader.get("progress", {}).get("book", {})
 
-    markedStatus = reading_stat.get("markedStatus")
+    finishReading = book_info.get("finishReading")
     readingProgress = progress.get("progress", 0)
     readingTime = progress.get("readingTime", 0)
+    # 因为没有明细的阅读天数，目前只能拿开始阅读时间和结束阅读时间来计算
     totalReadDay = utils.days_between_timestamps(
         progress.get("startReadingTime"),
         progress.get("finishTime") or time.time()
@@ -52,16 +53,19 @@ def insert_book_to_notion(books, index, bookId):
     isbn = book_info.get("isbn")
     intro = book_info.get("intro")
     categories = book_info.get("categories")
+    authors = [
+        seg.get("words") for seg in book_info.get("authorSeg") if seg.get("authorId")
+    ] if book_info.get("authorSeg") else [author]
 
     finishedDate = progress.get("finishTime")
     lastReadingDate = progress.get("updateTime")
     beginReadingDate = progress.get("startReadTime")
 
     book["阅读进度"] = (
-        100 if (markedStatus == 4) else readingProgress
+        100 if (finishReading == 1) else readingProgress
     ) / 100
     status = "想读"
-    if markedStatus == 4:
+    if finishReading == 1:
         status = "已读"
     elif readingTime >= 60:
         status = "在读"
@@ -91,9 +95,7 @@ def insert_book_to_notion(books, index, bookId):
             notion_helper.get_relation_id(
                 x, notion_helper.author_database_id, USER_ICON_URL
             )
-            # TODO: 作者用空格分隔是有风险的 e.g. [美] 穆雷・N. 罗斯巴德 著
-            # 考虑用另外的字段来解析
-            for x in author.split(" ")
+            for x in authors
         ]
         book["封面"] = cover
         if categories:
@@ -128,11 +130,11 @@ def insert_book_to_notion(books, index, bookId):
             properties=properties,
             icon=utils.get_icon(cover),
         )
-    # page_id = result.get("id")
-    # if book.get("readDetail") and book.get("readDetail").get("data"):
-    #     data = book.get("readDetail").get("data")
-    #     data = {item.get("readDate"): item.get("readTime") for item in data}
-    #     insert_read_data(page_id, data)
+    page_id = result.get("id")
+    if book.get("readDetail") and book.get("readDetail").get("data"):
+        data = book.get("readDetail").get("data")
+        data = {item.get("readDate"): item.get("readTime") for item in data}
+        insert_read_data(page_id, data)
 
 
 def insert_read_data(page_id, readTimes):
@@ -193,8 +195,11 @@ notion_books = {}
 def main():
     global notion_books
     global archive_dict
+    print("开始拉取书架...")
     bookshelf_books = weread_api.get_bookshelf()
+    print("书架拉取完成，开始拉取笔记...")
     notion_books = notion_helper.get_all_book()
+    print("笔记拉取完成，开始同步...")
     bookProgress = bookshelf_books.get("bookProgress")
     bookProgress = {book.get("bookId"): book for book in bookProgress}
     for archive in bookshelf_books.get("archive"):
@@ -218,10 +223,12 @@ def main():
             not_need_sync.append(key)
     notebooks = weread_api.get_notebooklist()
     notebooks = [d["bookId"] for d in notebooks if "bookId" in d]
-    books = bookshelf_books.get("books")
+    _books = books = bookshelf_books.get("books")
     books = [d["bookId"] for d in books if "bookId" in d]
-    books = list((set(notebooks) | set(books)) - set(not_need_sync))[0:1]
+    books = list((set(notebooks) | set(books)) - set(not_need_sync))
     for index, bookId in enumerate(books):
+        shelf_book = [b for b in _books if b["bookId"] == bookId]
+        print(f"开始同步《{shelf_book[0]['title']}》")
         insert_book_to_notion(books, index, bookId)
 
 

@@ -22,6 +22,12 @@ class Category(TypedDict):
     title: str
 
 
+class AuthorSeg(TypedDict):
+    words: str
+    highlight: int
+    authorId: Optional[str]
+
+
 class ReaderBookInfo(TypedDict):
     title: str
     author: str
@@ -32,6 +38,8 @@ class ReaderBookInfo(TypedDict):
     isbn: str
     bookId: str
     categories: list[Category]
+    authorSeg: Optional[list[AuthorSeg]]
+    finishReading: int
 
 
 class ReaderProgressBook(TypedDict):
@@ -71,7 +79,7 @@ def get_book_detail(url: str):
     )
 
     # 使用正则表达式提取 window 对象数据（例如 window.myData = {...};）
-    pattern = r'window\.__INITIAL_STATE__\s*=\s*({.*?});'
+    pattern = r'window\.__INITIAL_STATE__\s*=\s*({.*?});\s*\(function\(\)'
     match = re.search(pattern, response.text, re.DOTALL)
 
     if match:
@@ -85,4 +93,4 @@ def get_book_detail(url: str):
 
 
 if __name__ == '__main__':
-    print(get_book_detail('https://weread.qq.com/web/reader/6f5323f071bd7f7b6f521e8'))
+    print(get_book_detail('https://weread.qq.com/web/reader/6bf3215071a123016bf0b74'))
