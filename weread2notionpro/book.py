@@ -24,33 +24,38 @@ def insert_book_to_notion(books, index, bookId):
     bookInfo = weread_api.get_book_detail(bookId)
 
     """需要注入的属性"""
-    markedStatus = bookInfo.reader.get("readingStat").get("markedStatus")
-    readingProgress = bookInfo.reader.get(
-        'progress').get('book').get("progress") | 0
-    readingTime = bookInfo.reader.get(
-        'progress').get('book').get("readingTime") | 0
+    reader = bookInfo.reader
+    reading_stat = reader.get("readingStat", {})
+    book_info = reader.get("bookInfo", {})
+    progress = reader.get("progress", {}).get("book", {})
+
+    markedStatus = reading_stat.get("markedStatus")
+    readingProgress = progress.get("progress", 0)
+    readingTime = progress.get("readingTime", 0)
     totalReadDay = utils.days_between_timestamps(
-        bookInfo.reader.get('progress').get('book').get("startReadingTime"),
-        bookInfo.reader.get('progress').get('book').get("finishTime")
-        or time.time()
+        progress.get("startReadingTime"),
+        progress.get("finishTime") or time.time()
     )
-    newRating = bookInfo.reader.get("bookInfo").get("newRating")
-    newRatingDetail = bookInfo.reader.get("bookInfo").get("newRatingDetail")
-    cover = bookInfo.reader.get("bookInfo").get("cover").replace("/s_", "/t7_")
+
+    newRating = book_info.get("newRating")
+    newRatingDetail = book_info.get("newRatingDetail")
+
+    cover = book_info.get("cover", "")
+    if cover:
+        cover = cover.replace("/s_", "/t7_")
     if not cover or not cover.strip() or not cover.startswith("http"):
         cover = BOOK_ICON_URL
-    title = bookInfo.reader.get("bookInfo").get("title")
-    author = bookInfo.reader.get("bookInfo").get("author")
-    bookId = bookInfo.reader.get("bookInfo").get("bookId")
-    isbn = bookInfo.reader.get("bookInfo").get("isbn")
-    intro = bookInfo.reader.get("bookInfo").get("intro")
-    categories = bookInfo.reader.get("bookInfo").get("categories")
-    finishedDate = bookInfo.reader.get(
-        'progress').get('book').get("finishTime")
-    lastReadingDate = bookInfo.reader.get(
-        'progress').get('book').get("updateTime")
-    beginReadingDate = bookInfo.reader.get(
-        'progress').get('book').get("startReadTime")
+
+    title = book_info.get("title")
+    author = book_info.get("author")
+    bookId = book_info.get("bookId")
+    isbn = book_info.get("isbn")
+    intro = book_info.get("intro")
+    categories = book_info.get("categories")
+
+    finishedDate = progress.get("finishTime")
+    lastReadingDate = progress.get("updateTime")
+    beginReadingDate = progress.get("startReadTime")
 
     book["阅读进度"] = (
         100 if (markedStatus == 4) else readingProgress
